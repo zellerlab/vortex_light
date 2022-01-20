@@ -30,7 +30,7 @@ nextflow run /path/to/vortex_light/main.nf --input_dir /path/to/input_files --ou
 
 This requires a local nextflow installation. If you don't have one, see Steps 1/2 above.
 
-1. Make a local copy of the [run configuration file](https://raw.githubusercontent.com/zellerlab/vortex_light/main/nextflow/run.config) and adjust to your environment.
+1. Make a local copy of the [run configuration file](https://raw.githubusercontent.com/zellerlab/vortex_light/main/config/run.config) and adjust to your environment.
 
 2. Run the pipeline
 
