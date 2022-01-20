@@ -1,4 +1,4 @@
-# vortex_knight
+# vortex_light
 
 ### Installing locally and running from local installation
 
