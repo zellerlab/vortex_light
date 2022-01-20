@@ -43,7 +43,7 @@ nextflow run zellerlab/vortex_light --input_dir /path/to/input_files --output_di
 ### Input parameters
 
 * `--input_dir` should be a folder with bam files or with gzipped fastq files. For fastq files, individual samples should be separated into individual folders.
-* `--output_dir` is `vknight_out` in the local directory by default.
+* `--output_dir` is `vlight_out` in the local directory by default.
 * `--skip_<analysis>`, `--run_<analysis>` skips, resp. explicitly requires execution of the specified analysis (`pathseq`, `base_counts` (read counts post pre-processing), `kraken2`)
 * `--publishMode` allows to switch between various modes of how results files are placed in the `output_dir` (cf. NextFlow documentation)
 
