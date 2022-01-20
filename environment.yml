@@ -1,0 +1,8 @@
+name: vortex_light
+channels:
+ - bioconda
+ - conda-forge
+ - defaults
+dependencies:
+ - python>=3.7
+ - nextflow<21.10
