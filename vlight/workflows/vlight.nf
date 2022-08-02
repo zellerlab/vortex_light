@@ -2,8 +2,9 @@
 
 nextflow.enable.dsl=2
 
-include { kraken2 } from  "../../modules/vknight/profilers/kraken2"
-include { pathseq } from "../../modules/vknight/profilers/pathseq"
+include { kraken2 } from  "../modules/profilers/kraken2"
+include { pathseq } from "../modules/profilers/pathseq"
+include { fq2fa } from "../../nevermore/nevermore/modules/converters/fq2fa"
 
 
 if (!params.publish_mode) {
@@ -55,7 +56,9 @@ workflow fastq_analysis {
 			out_ch = out_ch.concat(kraken2.out.kraken2_out)
 		}
 
+		out_ch = out_ch
+			.map { sample, files -> return files }
+
 	emit:
 		results = out_ch
 }
-
