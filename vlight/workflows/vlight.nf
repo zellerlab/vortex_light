@@ -4,7 +4,7 @@ nextflow.enable.dsl=2
 
 include { kraken2 } from  "../modules/profilers/kraken2"
 include { pathseq } from "../modules/profilers/pathseq"
-include { fq2fa } from "../../nevermore/nevermore/modules/converters/fq2fa"
+include { fq2fa } from "../../nevermore/modules/converters/fq2fa"
 
 
 if (!params.publish_mode) {
