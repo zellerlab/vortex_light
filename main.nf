@@ -9,7 +9,7 @@ include { nevermore_simple_preprocessing } from "./nevermore/workflows/nevermore
 include { classify_sample } from "./nevermore/modules/functions"
 include { remove_host_kraken2; remove_host_kraken2_individual } from "./nevermore/modules/decon/kraken2"
 include { flagstats } from "./nevermore/modules/stats"
-include { bam_analyis; fastq_analysis } from "./vlight/workflows/vlight"
+include { bam_analysis; fastq_analysis } from "./vlight/workflows/vlight"
 
 
 def run_kraken2 = (!params.skip_kraken2 || params.run_kraken2)
