@@ -18,7 +18,7 @@ library(progress)
   ### iterate over every file and select counts at the selected tax level
   pb <- progress_bar$new(total=length(file_list))
   total.counts.mapped <- tibble(Sample_ID = !!gsub(x = file_list,pattern = ".txt",replacement = ""),tot.counts.mapped = double(length(file_list)))
-  i <- 81
+  i <- 1
   for(i in seq(1,length(file_list))){
     #message(i)
     ### read in file
@@ -47,14 +47,27 @@ library(progress)
     archea.start <- bac.end <- which(c.f[,6] == "Archaea") #get row in table at which "archea" start
     
     bac.end <- min(virus.start,archea.start)-1 #get last row with entries for bacteria
+    archea.end <- virus.start-1
+    
     if(!(is.finite(bac.end))){
       bac.end <- nrow(c.f)
     }
-    #subset to keep only the entries mapped to bacteria
-    bac.reads <- c.f[(bac.start:bac.end),]  
+    if(!is.finite(archea.end)){
+      archea.end <- bac.end
+    }
+    
+    #subset to keep only the entries mapped to bacteria AND archea
+    bac.reads <- c.f[(bac.start:archea.end),]  
     
     ### select counts and tax names
-    c.counts.df <- bac.reads %>% filter(tax.symbol == tax.sym | tax.symbol == "D") %>% select(tax.name,counts.sum) %>% 
+    c.counts.df <- 
+      bind_rows(
+        bac.reads %>% filter(tax.symbol == tax.sym) %>% select(tax.name,counts.sum), #select counts at genus level
+        bac.reads %>% filter(tax.symbol == "D") %>% select(tax.name,counts.sum) %>% #select "Bacterial" and "Archeal" counts, sum them togehter as "Bacteria" and merge with counts data
+          mutate(tax.name = "Bacteria") %>% 
+          group_by(tax.name) %>% 
+          summarise(counts.sum = sum(counts.sum))) %>% 
+      arrange(-counts.sum) %>% 
       rename(!!gsub(x = file_list[i],pattern = ".txt",replacement = "") := counts.sum)
     
     # Add to data from other samples
@@ -93,7 +106,7 @@ library(progress)
   ### initialize output df
   score.df <- tibble(tax.name = character(0),tax_id=double(0))
   counts.df <- tibble(tax.name = character(0),tax_id=double(0))
-
+  
   ### iterate over every file and select counts at the selected tax level
   empty.counter <- 0
   pb <- progress_bar$new(total=length(file_list))
@@ -111,17 +124,31 @@ library(progress)
     }
     
     ### select counts and tax names
+    #Edit 22-09-01: When Archaeal reads also should be considered: 
+    #Select "Archaea" and "Bacteria", sum up "score" and "unambigous" of the "superkingdom" and then normalize every tax.lvl counts against this number
+    
+    c.combined.df <- 
+      c.f %>% 
+      filter(type == "superkingdom",
+             kingdom %in% c("Bacteria","Archaea")) %>% 
+      mutate(name = "Bacteria") %>% 
+      group_by(name) %>% 
+      summarise(score = sum(score),
+                unambiguous = sum(unambiguous)) %>% 
+      add_column(tax_id = 0000) %>%  #just to have a tax_id
+      bind_rows(.,c.f %>% filter(kingdom %in% c("Bacteria","Archaea"),
+                                 type == tax.sym)) %>% 
+      mutate(score_normalized = score/score[1]*100)
+    
     c.score.df <-
-      c.f %>% filter(type == tax.sym | type == "superkingdom",
-                     kingdom == "Bacteria") %>%
+      c.combined.df %>% 
       select(name,tax_id,score_normalized) %>%
       rename(!!gsub(x = file_list[i],pattern = ".pathseq.txt",replacement = "") := score_normalized,
              tax.name = name)
-
+    
     # also unambiguous counts
     c.counts.df <-
-      c.f %>% filter(type == tax.sym | type == "superkingdom",
-                     kingdom == "Bacteria") %>%
+      c.combined.df %>% 
       select(name,tax_id,unambiguous) %>%
       rename(!!gsub(x = file_list[i],pattern = ".pathseq.txt",replacement = "") := unambiguous,
              tax.name = name)
@@ -142,7 +169,7 @@ library(progress)
                                                        TRUE ~ tax.name)) %>% 
     select(-tax_id)
   counts.df <- counts.df %>% mutate(tax.name = case_when(tax_id == 1980680 ~ "Alterileibacterium",
-                                                       TRUE ~ tax.name)) %>% 
+                                                         TRUE ~ tax.name)) %>% 
     select(-tax_id)
   
   
@@ -233,6 +260,5 @@ library(progress)
   }
   return(df.raw_counts)
 }
-
 
 
