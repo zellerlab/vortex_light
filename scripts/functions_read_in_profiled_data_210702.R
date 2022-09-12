@@ -47,7 +47,7 @@ library(progress)
     archea.start <- bac.end <- which(c.f[,6] == "Archaea") #get row in table at which "archea" start
     
     bac.end <- min(virus.start,archea.start)-1 #get last row with entries for bacteria
-    archea.end <- virus.start-1
+    archea.end <- archea.end <- min(virus.start)-1
     
     if(!(is.finite(bac.end))){
       bac.end <- nrow(c.f)
