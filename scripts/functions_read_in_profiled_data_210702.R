@@ -29,35 +29,54 @@ library(progress)
       next
     }
     #c.f <- read_tsv(paste0(path_to_folder,file_list[i]),col_names = var.names,col_types = cols())
-    c.f <-read.csv(paste0(path_to_folder,file_list[i]),header = FALSE,sep = "\t",comment.char = "",check.names = FALSE,col.names = var.names)
-    c.f$tax.name <- str_replace_all(c.f$tax.name,pattern = " ",replacement = "")
+    c.f <-read.csv(paste0(path_to_folder,file_list[i]),header = FALSE,sep = "\t",comment.char = "",check.names = FALSE,col.names = var.names) %>% 
+      mutate(tax.name = trimws(.$tax.name),
+             rowNames = seq(1,nrow(.)))
+    
+    
     c.total.counts.mapped <- c.f %>% filter(tax.name == "root") %>% pull(counts.sum)
     if(!(is_empty(c.total.counts.mapped))){
       total.counts.mapped[i,2] <- c.total.counts.mapped
     }  
     ### extract all bacterial counts
-    bac.start <- which(c.f[,6] == "Bacteria")
-    if(is_empty(bac.start)){
+    domains_vec <- 
+      c.f %>% 
+      filter(tax.symbol == "D") %>% 
+      arrange(rowNames) %>% 
+      select(tax.name,rowNames) %>% 
+      deframe
+    rowNamesVec <- as.numeric(domains_vec)
+    
+    #get start and end positions of individual domains (bacteria and archaea; viruses are not relevant)
+    bac.start <- as.numeric(domains_vec["Bacteria"])
+    bac.end <- rowNamesVec[which(rowNamesVec==bac.start)+1]-1
+    archaea.start <- as.numeric(domains_vec["Archaea"])
+    archaea.end <- rowNamesVec[which(rowNamesVec==archaea.start)+1]-1
+    
+    if(is.na(bac.start)){
       message(paste0("\nNo bacteria profiled in sample ",file_list[i], " - skipping"))
       pb$tick()
       next
     }
     
-    virus.start <- which(c.f[,6] == "Viruses") #get row in table at which "viruses" start
-    archea.start <- bac.end <- which(c.f[,6] == "Archaea") #get row in table at which "archea" start
-    
-    bac.end <- min(virus.start,archea.start)-1 #get last row with entries for bacteria
-    archea.end <- archea.end <- min(virus.start)-1
-    
-    if(!(is.finite(bac.end))){
-      bac.end <- nrow(c.f)
+    #check if the respective "end" number is empty -> if so, it must be changed to the last row of the file
+    if(!(is.na(bac.start))){
+      if(is.na((bac.end))){
+        bac.end <- nrow(c.f)
+      } 
     }
-    if(!is.finite(archea.end)){
-      archea.end <- bac.end
+    if(!(is.na(archaea.start))){
+      if(is.na(archaea.end)){
+        archaea.end <- nrow(c.f)
+      }
     }
-    
-    #subset to keep only the entries mapped to bacteria AND archea
-    bac.reads <- c.f[(bac.start:archea.end),]  
+    #subset data too keep only bacterial and archaeal reads
+    if(!(is.na(archaea.start))){#get bacterial and archaeal reads
+      bac.reads <- c.f[c(bac.start:bac.end,
+                         archaea.start:archaea.end),]
+    }else{#keep only bacterial reads
+      bac.reads <- c.f[c(bac.start:bac.end),]
+    }
     
     ### select counts and tax names
     c.counts.df <- 
@@ -68,7 +87,7 @@ library(progress)
           group_by(tax.name) %>% 
           summarise(counts.sum = sum(counts.sum))) %>% 
       arrange(-counts.sum) %>% 
-      rename(!!gsub(x = file_list[i],pattern = ".txt",replacement = "") := counts.sum)
+    rename(!!gsub(x = file_list[i],pattern = ".txt",replacement = "") := counts.sum)
     
     # Add to data from other samples
     counts.df <- suppressMessages(full_join(counts.df,c.counts.df,by="tax.name"))
@@ -106,14 +125,15 @@ library(progress)
   ### initialize output df
   score.df <- tibble(tax.name = character(0),tax_id=double(0))
   counts.df <- tibble(tax.name = character(0),tax_id=double(0))
-  
+
   ### iterate over every file and select counts at the selected tax level
   empty.counter <- 0
   pb <- progress_bar$new(total=length(file_list))
   for(i in seq(1,length(file_list))){
     ## read in file
     #c.f <-read_tsv(paste0(path_to_folder,file_list[i]),col_types = cols())
-    c.f <-read.csv(paste0(path_to_folder,file_list[i]),header = TRUE,sep = "\t",comment.char = "",check.names = FALSE)
+    c.f <-read.csv(paste0(path_to_folder,file_list[i]),header = TRUE,sep = "\t",comment.char = "",check.names = FALSE) %>% 
+      mutate(name = str_replace(name,pattern = "\\_",replacement = " "))
     
     #check if file is empty
     if(nrow(c.f) == 0){
@@ -136,8 +156,8 @@ library(progress)
       summarise(score = sum(score),
                 unambiguous = sum(unambiguous)) %>% 
       add_column(tax_id = 0000) %>%  #just to have a tax_id
-      bind_rows(.,c.f %>% filter(kingdom %in% c("Bacteria","Archaea"),
-                                 type == tax.sym)) %>% 
+    bind_rows(.,c.f %>% filter(kingdom %in% c("Bacteria","Archaea"),
+                               type == tax.sym)) %>% 
       mutate(score_normalized = score/score[1]*100)
     
     c.score.df <-
@@ -145,7 +165,7 @@ library(progress)
       select(name,tax_id,score_normalized) %>%
       rename(!!gsub(x = file_list[i],pattern = ".pathseq.txt",replacement = "") := score_normalized,
              tax.name = name)
-    
+
     # also unambiguous counts
     c.counts.df <-
       c.combined.df %>% 
@@ -169,7 +189,7 @@ library(progress)
                                                        TRUE ~ tax.name)) %>% 
     select(-tax_id)
   counts.df <- counts.df %>% mutate(tax.name = case_when(tax_id == 1980680 ~ "Alterileibacterium",
-                                                         TRUE ~ tax.name)) %>% 
+                                                       TRUE ~ tax.name)) %>% 
     select(-tax_id)
   
   
