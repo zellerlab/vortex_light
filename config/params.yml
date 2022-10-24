@@ -43,10 +43,10 @@ qc_params_shotgun: "qtrim=rl trimq=3 maq=25 ktrim=r k=23 mink=11 hdist=1 ftm=5 e
 # kraken2 parameters
 
 # kraken2 db path
-kraken_database: "/g/scb/zeller/jawirbel/total_RNAseq/databases/kraken2_standard"
+# kraken_database: "/g/scb/zeller/jawirbel/total_RNAseq/databases/kraken2_standard"
 
 # kraken2_min_hit_groups
-kraken2_min_hit_groups: 10
+# kraken2_min_hit_groups: 10
 
 
 # pathseq parameters

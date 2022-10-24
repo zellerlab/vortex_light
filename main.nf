@@ -12,7 +12,7 @@ include { flagstats } from "./nevermore/modules/stats"
 include { bam_analysis; fastq_analysis } from "./vlight/workflows/vlight"
 
 
-def run_kraken2 = (!params.skip_kraken2 || params.run_kraken2)
+def run_kraken2 = false
 def run_pathseq = (!params.skip_pathseq || params.run_pathseq)
 
 def get_basecounts = (!params.skip_basecounts || params.run_basecounts);
@@ -38,9 +38,6 @@ process collate_results {
 	script:
 	"""
 	mkdir -p collated/
-
-	mkdir -p kraken2/
-	(mv *kraken2_report.txt kraken2/) || :
 
 	mkdir -p pathseq/
 	(mv *pathseq.scores pathseq/) || :
