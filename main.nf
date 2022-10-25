@@ -105,9 +105,7 @@ workflow {
 
 	if (do_preprocessing) {
 
-		raw_fastq_ch = prepare_fastqs.out.reads.concat(fastq_ch)
-
-		nevermore_simple_preprocessing(raw_fastq_ch)
+		nevermore_simple_preprocessing(fastq_ch)
 
 		preprocessed_ch = nevermore_simple_preprocessing.out.main_reads_out
 		results_ch = results_ch
