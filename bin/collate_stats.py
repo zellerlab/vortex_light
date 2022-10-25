@@ -1,1 +1,1 @@
-nevermore/bin/collate_stats.py
+../nevermore/bin/collate_stats.py

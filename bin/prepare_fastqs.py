@@ -1,1 +1,1 @@
-nevermore/bin/prepare_fastqs.py
+../nevermore/bin/prepare_fastqs.py

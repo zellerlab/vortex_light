@@ -1,1 +1,1 @@
-nevermore/bin/transfer.py
+../nevermore/bin/transfer.py
