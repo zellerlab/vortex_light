@@ -10,9 +10,10 @@ include { classify_sample } from "./nevermore/modules/functions"
 include { remove_host_kraken2; remove_host_kraken2_individual } from "./nevermore/modules/decon/kraken2"
 include { flagstats } from "./nevermore/modules/stats"
 include { bam_analysis; fastq_analysis } from "./vlight/workflows/vlight"
+include { fastq_input; bam_input } from "./nevermore/workflows/input"
 
 
-def run_kraken2 = (!params.skip_kraken2 || params.run_kraken2)
+def run_kraken2 = false
 def run_pathseq = (!params.skip_pathseq || params.run_pathseq)
 
 def get_basecounts = (!params.skip_basecounts || params.run_basecounts);
@@ -40,7 +41,6 @@ process collate_results {
 	mkdir -p collated/
 
 	mkdir -p kraken2/
-	(mv *kraken2_report.txt kraken2/) || :
 
 	mkdir -p pathseq/
 	(mv *pathseq.scores pathseq/) || :
@@ -70,43 +70,42 @@ process collate_results {
 }
 
 
+if (params.input_dir && params.remote_input_dir) {
+	log.info """
+		Cannot process both --input_dir and --remote_input_dir. Please check input parameters.
+	""".stripIndent()
+	exit 1
+} else if (!params.input_dir && !params.remote_input_dir) {
+	log.info """
+		Neither --input_dir nor --remote_input_dir set.
+	""".stripIndent()
+	exit 1
+}
+
+def input_dir = (params.input_dir) ? params.input_dir : params.remote_input_dir
+def fastq_input_pattern = input_dir + "/" + "**[._]{fastq.gz,fq.gz}"
+def bam_input_pattern = input_dir + "/" + "**.bam"
+
+
 
 workflow {
 
-	fastq_ch = Channel
-		//.fromPath(params.input_dir + "/" + "**.{fastq,fq,fastq.gz,fq.gz}")
-		.fromPath(params.input_dir + "/" + "**[._]{fastq.gz,fq.gz}")
-		.map { file ->
-				def sample = file.name.replaceAll(/.?(fastq|fq)(.gz)?$/, "")
-				sample = sample.replaceAll(/_R?[12]$/, "")
-				return tuple(sample, file)
-		}
-		.groupTuple(sort: true)
-        .map { classify_sample(it[0], it[1]) }
+	fastq_input(
+		Channel.fromPath(fastq_input_pattern)
+	)
 
-	bam_ch = Channel
-		.fromPath(params.input_dir + "/" + "**.bam")
-		.map { file ->
-			def sample = file.name.replaceAll(/.bam$/, "")
-			return tuple(sample, file)
-		}
-		.groupTuple(sort: true)
-		.map { classify_sample(it[0], it[1]) }
+	bam_input(
+		Channel.fromPath(bam_input_pattern)
+	)
 
-	bam2fq(bam_ch)
-
-	bfastq_ch = bam2fq.out.reads
-		.map { classify_sample(it[0].id, it[1]) }
-
-	prepare_fastqs(fastq_ch)
+	fastq_ch = fastq_input.out.fastqs.concat(bam_input.out.bamfiles)
+	fastq_ch.view()
 
 	results_ch = Channel.empty()
 
 	if (do_preprocessing) {
 
-		raw_fastq_ch = prepare_fastqs.out.reads.concat(bfastq_ch)
-
-		nevermore_simple_preprocessing(raw_fastq_ch)
+		nevermore_simple_preprocessing(fastq_ch)
 
 		preprocessed_ch = nevermore_simple_preprocessing.out.main_reads_out
 		results_ch = results_ch
@@ -134,8 +133,7 @@ workflow {
 
 	} else {
 
-		preprocessed_ch = prepare_fastqs.out.reads
-			.concat(bfastq_ch)
+		preprocessed_ch = fastqc_ch
 
 	}
 
