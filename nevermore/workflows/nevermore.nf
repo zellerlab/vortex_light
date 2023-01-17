@@ -90,4 +90,6 @@ workflow nevermore_main {
 
 	emit:
 		alignments = align_ch
+		fastqs = nevermore_prep_align.out.fastqs
+		read_counts = nevermore_prep_align.out.read_counts
 }

@@ -1,13 +1,13 @@
 nextflow.enable.dsl=2
 
 include { classify_sample } from "../modules/functions"
+include { bam2fq } from "../modules/converters/bam2fq"
 
+def bam_suffix_pattern = null
 
-if (!params.bam_input_pattern) {
-	params.bam_input_pattern = "**.bam"
+if (params.bam_input_pattern) {
+	bam_suffix_pattern = params.bam_input_pattern.replaceAll(/\*/, "")
 }
-
-def bam_suffix_pattern = params.bam_input_pattern.replaceAll(/\*/, "")
 
 def input_dir = (params.input_dir) ? params.input_dir : params.remote_input_dir
 
@@ -43,15 +43,17 @@ process prepare_fastqs {
 		path(files)
 		val(remote_input)
 	output:
-		path("fastq/*/*.fastq.gz"), emit: fastqs
+		path("fastq/*/*.fastq.{gz,bz2}"), emit: fastqs
 
   script:
 		def remote_option = (remote_input) ? "--remote-input" : ""
 		def remove_suffix = (params.suffix_pattern) ? "--remove-suffix ${params.suffix_pattern}" : ""
 		def input_dir_prefix = (params.input_dir) ? params.input_dir : params.remote_input_dir
+
+		def custom_suffixes = (params.custom_fastq_file_suffixes) ? "--valid-fastq-suffixes ${params.custom_fastq_file_suffixes}" : ""
+		
 		"""
-		mkdir -p fastq/
-		prepare_fastqs.py -i . -o fastq/ -p ${input_dir_prefix} ${remote_option} ${remove_suffix}
+		prepare_fastqs.py -i . -o fastq/ -p ${input_dir_prefix} ${custom_suffixes} ${remote_option} ${remove_suffix}
 		"""
 }
 
