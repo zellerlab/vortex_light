@@ -28,7 +28,7 @@ workflow {
 
 	if (params.bam_input_pattern) {
 		bam_input(
-			Channel.fromPath(bam_input_pattern)
+			Channel.fromPath(params.bam_input_pattern)
 		)
 		fastq_ch = bam_input.out.bamfiles
 	} else {
