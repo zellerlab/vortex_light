@@ -12,6 +12,9 @@ include { nevermore_simple_preprocessing } from "../../nevermore/workflows/never
 include { remove_host_kraken2; remove_host_kraken2_individual } from "../../nevermore/modules/decon/kraken2"
 include { flagstats } from "../../nevermore/modules/stats"
 include { collate_results } from "../modules/collate"
+include { collate_stats } from "../../nevermore/modules/collate"
+
+
 if (!params.publish_mode) {
 	params.publish_mode = "symlink"
 }
@@ -165,6 +168,8 @@ workflow vlight_main {
 				params.GTDB_markers
 			)
 		}
+
+		collate_stats(results_ch)
 
 	emit:
 		results = results_ch
