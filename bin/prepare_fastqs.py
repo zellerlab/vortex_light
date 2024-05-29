@@ -1,1 +1,0 @@
-../nevermore/bin/prepare_fastqs.py
